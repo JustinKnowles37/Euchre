@@ -1,0 +1,3 @@
+update strategy to be more complex
+If dealer is stuck, logging shows difference from when dealer wants to choose it in second round - can probably clean this up to speed up sim time
+Dealer isn't currently picking up the upcard and swapping it
