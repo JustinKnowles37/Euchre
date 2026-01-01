@@ -7,10 +7,6 @@ NUM_PLAYERS = 4
 HAND_SIZE = 5
 
 
-def log(msg):
-    print(f"[CALL_TRUMP] {msg}")
-
-
 class EuchreGame:
     def __init__(self, players=None, strategies=None, verbose=False):
         self.deck = list(range(24))
@@ -23,7 +19,12 @@ class EuchreGame:
             else [SimpleStrategy() for _ in range(4)]
         )
 
-        self.verbose = verbose
+        # only prints if verbose==True
+        if verbose:
+            self.log = print
+        else:
+            self.log = lambda *args, **kwargs: None
+
         self.hands = [[] for _ in range(NUM_PLAYERS)]
         self.trump = None
         self.upcard = None
@@ -54,9 +55,8 @@ class EuchreGame:
         Handles both rounds of trump calling with correct rotation.
         Supports going alone.
         """
-        if self.verbose:
-            print("\n=== CALLING TRUMP PHASE ===")
-            print(f"Upcard is {card_name(self.upcard)}\n")
+        self.log("\n=== CALLING TRUMP PHASE ===")
+        self.log(f"Upcard is {card_name(self.upcard)}\n")
 
         # Reset loner state every hand
         self.going_alone = False
@@ -79,11 +79,10 @@ class EuchreGame:
             is_dealer = i == self.dealer
             upcard_visible = self.upcard if is_dealer else None
 
-            if self.verbose:
-                log(
-                    f"{self.players[i]} {'(DEALER)' if is_dealer else ''} hand: "
-                    + ", ".join(card_name(c) for c in hand)
-                )
+            self.log(
+                f"[CALL_TRUMP] {self.players[i]} {'(DEALER)' if is_dealer else ''} hand: "
+                + ", ".join(card_name(c) for c in hand)
+            )
 
             result = strat.choose_trump(
                 hand=hand,
@@ -93,12 +92,12 @@ class EuchreGame:
             )
 
             if upcard_visible is not None:
-                if self.verbose:
-                    log(f"{self.players[i]} sees upcard {card_name(self.upcard)}")
+                self.log(
+                    f"[CALL_TRUMP] {self.players[i]} sees upcard {card_name(self.upcard)}"
+                )
 
             if result is None:
-                if self.verbose:
-                    log(f"{self.players[i]} passes")
+                self.log(f"[CALL_TRUMP] {self.players[i]} passes")
                 continue
 
             # --- DEALER PICKS UP UP-CARD (ROUND 1 ONLY) ---
@@ -112,11 +111,10 @@ class EuchreGame:
             discard = self.strategies[dealer].discard(dealer_hand, self.trump)
             dealer_hand.remove(discard)
 
-            if self.verbose:
-                print(
-                    f"{self.players[dealer]} picks up {card_name(self.upcard)} "
-                    f"and discards {card_name(discard)}"
-                )
+            self.log(
+                f"[CALL_TRUMP] {self.players[dealer]} picks up {card_name(self.upcard)} "
+                f"and discards {card_name(discard)}"
+            )
 
             assert len(dealer_hand) == 5
             # --------------------------------------------
@@ -129,16 +127,15 @@ class EuchreGame:
             self.loner = i
             self.sitting_out = (i + 2) % 4 if alone else None
 
-            if self.verbose:
-                log(
-                    f"{self.players[i]} CALLS TRUMP → {SUITS[suit]}"
-                    + (" AND GOES ALONE" if alone else "")
-                )
+            self.log(
+                f"[CALL_TRUMP] {self.players[i]} CALLS TRUMP → {SUITS[suit]}"
+                + (" AND GOES ALONE" if alone else "")
+            )
 
-                print(
-                    f"\nTrump set to {SUITS[self.trump]} by {self.players[i]} "
-                    f"(Team {self.makers})\n"
-                )
+            self.log(
+                f"\nTrump set to {SUITS[self.trump]} by {self.players[i]} "
+                f"(Team {self.makers})\n"
+            )
             return
 
         # ----------------------------
@@ -158,8 +155,7 @@ class EuchreGame:
             )
 
             if result is None:
-                if self.verbose:
-                    log(f"{self.players[i]} passes in second round")
+                self.log(f"[CALL_TRUMP] {self.players[i]} passes in second round")
                 continue
 
             suit, alone = result
@@ -170,16 +166,15 @@ class EuchreGame:
             self.loner = i
             self.sitting_out = (i + 2) % 4 if alone else None
 
-            if self.verbose:
-                log(
-                    f"{self.players[i]} CALLS TRUMP → {SUITS[suit]} in second round"
-                    + (" AND GOES ALONE" if alone else "")
-                )
+            self.log(
+                f"[CALL_TRUMP] {self.players[i]} CALLS TRUMP → {SUITS[suit]} in second round"
+                + (" AND GOES ALONE" if alone else "")
+            )
 
-                print(
-                    f"\nTrump set to {SUITS[self.trump]} by {self.players[i]} "
-                    f"(Team {self.makers})\n"
-                )
+            self.log(
+                f"\nTrump set to {SUITS[self.trump]} by {self.players[i]} "
+                f"(Team {self.makers})\n"
+            )
             return
 
         # ----------------------------
@@ -200,16 +195,14 @@ class EuchreGame:
         self.loner = dealer
         self.sitting_out = (dealer + 2) % 4 if alone else None
 
-        if self.verbose:
-            log(
-                f"Dealer {self.players[dealer]} forced to choose trump → {SUITS[suit]}"
-                + (" AND GOES ALONE" if alone else "")
-            )
+        self.log(
+            f"[CALL_TRUMP] Dealer {self.players[dealer]} forced to choose trump → {SUITS[suit]}"
+            + (" AND GOES ALONE" if alone else "")
+        )
 
-            print(
-                f"\nFinal Trump: {SUITS[self.trump]} "
-                f"(Team {self.makers} are makers)\n"
-            )
+        self.log(
+            f"\nFinal Trump: {SUITS[self.trump]} " f"(Team {self.makers} are makers)\n"
+        )
 
     def check_defend_alone(self):
         """
@@ -233,11 +226,10 @@ class EuchreGame:
 
                 self.two_player_hand = True
 
-                if self.verbose:
-                    print(
-                        f"{self.players[p]} DEFENDS ALONE! "
-                        f"Only two players active: {self.players[self.loner]} vs {self.players[p]}"
-                    )
+                self.log(
+                    f"{self.players[p]} DEFENDS ALONE! "
+                    f"Only two players active: {self.players[self.loner]} vs {self.players[p]}"
+                )
                 return
 
     # ------------------------------------------------------------
@@ -268,15 +260,13 @@ class EuchreGame:
             hand.remove(card)
             trick.append(card)
 
-            if self.verbose:
-                print(f"{self.players[p]} plays {card_name(card)}")
+            self.log(f"{self.players[p]} plays {card_name(card)}")
 
         led_suit = card_suit(trick[0])
         winner_offset = winner_of_trick(trick, self.trump, led_suit)
         winner = players_in_trick[winner_offset]
 
-        if self.verbose:
-            print(f"{self.players[winner]} wins the trick\n")
+        self.log(f"{self.players[winner]} wins the trick\n")
         return winner
 
     def first_active_player(self, start):
@@ -300,8 +290,7 @@ class EuchreGame:
         self.call_trump()
         self.check_defend_alone()
 
-        if self.verbose:
-            print(f"Trump is {SUITS[self.trump]}")
+        self.log(f"Trump is {SUITS[self.trump]}")
 
         lead_player = self.first_active_player(self.dealer)
         tricks_won = [0, 0]  # team 0, team 1
@@ -322,61 +311,51 @@ class EuchreGame:
             if maker_tricks == 5:
                 # Lone hand sweep
                 self.scores[makers] += 4
-                if self.verbose:
-                    print(
-                        f"{self.players[self.loner]} wins ALL 5 tricks alone! +4 points"
-                    )
+                self.log(
+                    f"{self.players[self.loner]} wins ALL 5 tricks alone! +4 points"
+                )
             elif maker_tricks >= 3:
                 # Lone hand win (but not sweep)
                 self.scores[makers] += 1
-                if self.verbose:
-                    print(f"{self.players[self.loner]} wins the hand alone! +1 point")
+                self.log(f"{self.players[self.loner]} wins the hand alone! +1 point")
             else:
                 if self.two_player_hand:
                     # Lone defender win
                     self.scores[defenders] += 4
-                    if self.verbose:
-                        print(
-                            f"{self.players[self.defender_loner]} DEFENDS ALONE successfully! +4 points"
-                        )
+                    self.log(
+                        f"{self.players[self.defender_loner]} DEFENDS ALONE successfully! +4 points"
+                    )
                 else:
                     # Lone hand euchred
                     self.scores[defenders] += 2
-                    if self.verbose:
-                        print(
-                            f"{self.players[self.loner]} was euchred while going alone! Defenders +2"
-                        )
+                    self.log(
+                        f"{self.players[self.loner]} was euchred while going alone! Defenders +2"
+                    )
         else:
             # Normal (non-loner) scoring
             if maker_tricks < 3:
                 self.scores[defenders] += 2
-                if self.verbose:
-                    print(f"Team {defenders} euchred the makers! +2")
+                self.log(f"Team {defenders} euchred the makers! +2")
             elif maker_tricks == 5:
                 self.scores[makers] += 2
-                if self.verbose:
-                    print(f"Team {makers} sweeps! +2")
+                self.log(f"Team {makers} sweeps! +2")
             else:
                 self.scores[makers] += 1
-                if self.verbose:
-                    print(f"Team {makers} wins the hand! +1")
+                self.log(f"Team {makers} wins the hand! +1")
 
-        if self.verbose:
-            print(f"Score: Team 0 = {self.scores[0]}, Team 1 = {self.scores[1]}\n")
+        self.log(f"Score: Team 0 = {self.scores[0]}, Team 1 = {self.scores[1]}\n")
 
     # ------------------------------------------------------------
     # FULL GAME LOOP
     # ------------------------------------------------------------
     def play_game(self, winning_score=10):
         while self.scores[0] < winning_score and self.scores[1] < winning_score:
-            if self.verbose:
-                print(f"Dealer is {self.players[self.dealer]}")
+            self.log(f"Dealer is {self.players[self.dealer]}")
             self.play_hand()
             self.dealer = (self.dealer + 1) % NUM_PLAYERS
 
         winner = 0 if self.scores[0] >= winning_score else 1
-        if self.verbose:
-            print(f"*** Team {winner} wins the game! ***")
+        self.log(f"*** Team {winner} wins the game! ***")
 
 
 # ------------------------------------------------------------
