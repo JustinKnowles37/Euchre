@@ -47,6 +47,40 @@ class EuchreGame:
         ]
         self.upcard = self.deck[NUM_PLAYERS * HAND_SIZE]
 
+    def deal_fixed_hand(
+        self,
+        fixed_hand: list[int],
+        fixed_upcard: int,
+        fixed_seat: int,
+        rng: random.Random,
+    ):
+        """
+        Replace normal dealing with a fixed hand for one player and fixed upcard.
+        All other cards are shuffled and dealt around that.
+        """
+        # Remove fixed cards from deck
+        remaining = [c for c in self.deck if c not in fixed_hand and c != fixed_upcard]
+
+        # Shuffle the remainder
+        rng.shuffle(remaining)
+
+        # Build hands
+        self.hands = [[] for _ in range(NUM_PLAYERS)]
+        # assign fixed hand
+        self.hands[fixed_seat] = list(fixed_hand)
+
+        # assign others
+        idx = 0
+        for p in range(NUM_PLAYERS):
+            if p == fixed_seat:
+                continue
+            # deal HAND_SIZE cards to others
+            self.hands[p] = remaining[idx : idx + HAND_SIZE]
+            idx += HAND_SIZE
+
+        # fixed upcard sits after dealing
+        self.upcard = fixed_upcard
+
     # ------------------------------------------------------------
     # TRUMP CALLING (each player's strategy decides)
     # ------------------------------------------------------------
@@ -282,11 +316,83 @@ class EuchreGame:
             return p
         return start  # fallback
 
+    def score_hand(self, tricks_won):
+        makers = self.makers
+        defenders = 1 - makers
+        maker_tricks = tricks_won[makers]
+        maker_points = 0
+        loner_success = False
+
+        # scoring logic
+        if self.going_alone:
+            if maker_tricks == 5:
+                # Lone hand sweep
+                maker_points = 4
+                loner_success = True
+                self.scores[makers] += 4
+                self.log(
+                    f"{self.players[self.loner]} wins ALL 5 tricks alone! +4 points"
+                )
+            elif maker_tricks >= 3:
+                # Lone hand win (but not sweep)
+                maker_points = 1
+                self.scores[makers] += 1
+                self.log(f"{self.players[self.loner]} wins the hand alone! +1 point")
+            else:
+                if self.two_player_hand:
+                    # Lone defender win
+                    maker_points = -4
+                    self.scores[defenders] += 4
+                    self.log(
+                        f"{self.players[self.defender_loner]} DEFENDS ALONE successfully! +4 points"
+                    )
+                else:
+                    # Lone hand euchred
+                    maker_points = -2
+                    self.scores[defenders] += 2
+                    self.log(
+                        f"{self.players[self.loner]} was euchred while going alone! Defenders +2"
+                    )
+        else:
+            # Normal (non-loner) scoring
+            if maker_tricks < 3:
+                maker_points = -2
+                self.scores[defenders] += 2
+                self.log(f"Team {defenders} euchred the makers! +2")
+            elif maker_tricks == 5:
+                maker_points = 2
+                self.scores[makers] += 2
+                self.log(f"Team {makers} sweeps! +2")
+            else:
+                maker_points = 1
+                self.scores[makers] += 1
+                self.log(f"Team {makers} wins the hand! +1")
+
+        self.log(f"Score: Team 0 = {self.scores[0]}, Team 1 = {self.scores[1]}\n")
+
+        return {
+            "maker_points": maker_points,
+            "makers_team": makers,
+            "tricks_makers": maker_tricks,
+            "tricks_defenders": tricks_won[defenders],
+            "loner_success": loner_success,
+        }
+
     # ------------------------------------------------------------
     # PLAY ONE HAND (5 TRICKS)
     # ------------------------------------------------------------
-    def play_hand(self):
-        self.shuffle_and_deal()
+    def play_hand(
+        self,
+        is_fixed=False,
+        fixed_hand=None,
+        fixed_upcard=None,
+        fixed_seat=None,
+        rng=None,
+    ):
+        if is_fixed:
+            self.deal_fixed_hand(fixed_hand, fixed_upcard, fixed_seat, rng)
+        else:
+            self.shuffle_and_deal()
         self.call_trump()
         self.check_defend_alone()
 
@@ -302,48 +408,8 @@ class EuchreGame:
             tricks_won[team] += 1
             lead_player = winner
 
-        makers = self.makers
-        defenders = 1 - makers
-        maker_tricks = tricks_won[makers]
-
-        # scoring logic
-        if self.going_alone:
-            if maker_tricks == 5:
-                # Lone hand sweep
-                self.scores[makers] += 4
-                self.log(
-                    f"{self.players[self.loner]} wins ALL 5 tricks alone! +4 points"
-                )
-            elif maker_tricks >= 3:
-                # Lone hand win (but not sweep)
-                self.scores[makers] += 1
-                self.log(f"{self.players[self.loner]} wins the hand alone! +1 point")
-            else:
-                if self.two_player_hand:
-                    # Lone defender win
-                    self.scores[defenders] += 4
-                    self.log(
-                        f"{self.players[self.defender_loner]} DEFENDS ALONE successfully! +4 points"
-                    )
-                else:
-                    # Lone hand euchred
-                    self.scores[defenders] += 2
-                    self.log(
-                        f"{self.players[self.loner]} was euchred while going alone! Defenders +2"
-                    )
-        else:
-            # Normal (non-loner) scoring
-            if maker_tricks < 3:
-                self.scores[defenders] += 2
-                self.log(f"Team {defenders} euchred the makers! +2")
-            elif maker_tricks == 5:
-                self.scores[makers] += 2
-                self.log(f"Team {makers} sweeps! +2")
-            else:
-                self.scores[makers] += 1
-                self.log(f"Team {makers} wins the hand! +1")
-
-        self.log(f"Score: Team 0 = {self.scores[0]}, Team 1 = {self.scores[1]}\n")
+        outcome = self.score_hand(tricks_won)
+        return outcome
 
     # ------------------------------------------------------------
     # FULL GAME LOOP
@@ -352,6 +418,7 @@ class EuchreGame:
         while self.scores[0] < winning_score and self.scores[1] < winning_score:
             self.log(f"Dealer is {self.players[self.dealer]}")
             self.play_hand()
+            # self.play_hand(True, [0, 1, 2, 3, 4], 5, 0, random.Random(42))
             self.dealer = (self.dealer + 1) % NUM_PLAYERS
 
         winner = 0 if self.scores[0] >= winning_score else 1
