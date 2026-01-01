@@ -9,15 +9,11 @@ RANKS = ["9", "10", "J", "Q", "K", "A"]
 CARD_TO_SUIT = [i // 6 for i in range(24)]
 CARD_TO_RANK = [i % 6 for i in range(24)]
 CARD_NAME = [f"{RANKS[r]} of {SUITS[s]}" for s in range(4) for r in range(6)]
+CARD_COLOR = [0, 1, 1, 0]  # Clubs/Spades black=0, Diamonds/Hearts red=1
 
 # Left-bower mapping (same color suit)
 # Clubs ↔ Spades, Diamonds ↔ Hearts
-LEFT_BOWER_SUIT = {
-    0: 3,  # Clubs → Spades
-    3: 0,  # Spades → Clubs
-    1: 2,  # Diamonds → Hearts
-    2: 1,  # Hearts → Diamonds
-}
+LEFT_BOWER_SUIT = [3, 2, 1, 0]
 
 
 # ---------- CARD HELPERS ----------

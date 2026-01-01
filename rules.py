@@ -1,8 +1,4 @@
-from cards import (
-    card_suit,
-    is_trump,
-    effective_rank,
-)
+from cards import card_suit, is_trump, effective_rank
 
 
 # ------------------------------------------------------------
