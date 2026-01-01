@@ -13,5 +13,8 @@ strategy.py
 game.py
 - Contains code to run an entire euchre game
 
+simulation.py
+- Contains code to determine hand statistics, fixing the player's hand and the upcard, while randomizing all other cards
+
 todo.txt
 - Brief list of features to be implemented
