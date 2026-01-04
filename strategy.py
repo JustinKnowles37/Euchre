@@ -1,11 +1,15 @@
+from abc import ABC, abstractmethod
 from cards import LEFT_BOWER_SUIT, card_rank, card_suit, effective_rank
 
 
-class SimpleStrategy:
+# Abstract Base Class for all strategies
+class Strategy(ABC):
     """
-    A very fast, minimal strategy compatible with rules.play_trick().
+    A base class that all strategy classes must inherit from.
+    Defines the required methods each strategy must implement.
     """
 
+    @abstractmethod
     def play_card(self, hand, legal, trick, trump):
         """
         hand: full hand list
@@ -13,12 +17,9 @@ class SimpleStrategy:
         trick: cards played so far (indexed by player seat)
         trump: trump suit int
         """
+        pass
 
-        # If we are following suit, pick the weakest legal card
-        # Strength is based on effective_rank for fast comparison.
-        return min(legal, key=lambda c: effective_rank(c, trump))
-
-    # Optional helpers used during bidding
+    @abstractmethod
     def choose_trump(
         self, hand, upcard=None, is_dealer=False, valid_suits=None, force=False
     ):
@@ -37,6 +38,45 @@ class SimpleStrategy:
             (suit, False)         -> call trump, not alone
             (suit, True)          -> call trump and go alone
         """
+        pass
+
+    @abstractmethod
+    def discard(self, hand, trump_suit):
+        """
+        Choose a card to discard after picking up the upcard.
+        Default: discard lowest non-trump, else lowest trump.
+        """
+        pass
+
+    @abstractmethod
+    def defend_alone(self, hand, trump_suit):
+        """
+        Decide whether to defend alone.
+        Return True to defend alone, False otherwise.
+        """
+        pass
+
+    def __repr__(self):
+        """
+        Optional toString or debug functionality.
+        """
+        return f"{self.__class__.__name__} Strategy"
+
+
+class SimpleStrategy(Strategy):
+    """
+    A very fast, minimal strategy that allows the code to run.
+    """
+
+    def play_card(self, hand, legal, trick, trump):
+        # If we are following suit, pick the weakest legal card
+        # Strength is based on effective_rank for fast comparison.
+        return min(legal, key=lambda c: effective_rank(c, trump))
+
+    # Optional helpers used during bidding
+    def choose_trump(
+        self, hand, upcard=None, is_dealer=False, valid_suits=None, force=False
+    ):
         if valid_suits is None:
             valid_suits = [0, 1, 2, 3]
 
@@ -78,20 +118,12 @@ class SimpleStrategy:
         return (best_suit, alone)
 
     def discard(self, hand, trump_suit):
-        """
-        Choose a card to discard after picking up the upcard.
-        Default: discard lowest non-trump, else lowest trump.
-        """
         non_trumps = [c for c in hand if card_suit(c) != trump_suit]
         if non_trumps:
             return min(non_trumps)
         return min(hand)
 
     def defend_alone(self, hand, trump_suit):
-        """
-        Decide whether to defend alone.
-        Return True to defend alone, False otherwise.
-        """
         strength = 0
 
         for c in hand:
