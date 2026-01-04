@@ -44,6 +44,9 @@ def simulate_hand(
     call_override: Callable = None,
     rng_seed: int = None,
 ):
+    """
+    fixed_seat of 0 is dealer
+    """
     stats = SimulationStats()
     rng = random.Random(rng_seed)
 
@@ -55,7 +58,10 @@ def simulate_hand(
             for strat in game.strategies:
                 strat.choose_trump = call_override"""
 
-        outcome = game.play_hand(True, fixed_hand, fixed_upcard, fixed_seat, rng)
+        # Adjust fixed_seat relative to the dealer
+        relative_seat = (fixed_seat + game.dealer) % 4
+
+        outcome = game.play_hand(True, fixed_hand, fixed_upcard, relative_seat, rng)
         stats.record(outcome)
 
     return stats.report()
