@@ -1,5 +1,5 @@
 import random
-from cards import RANKS, SUITS, card_name, card_suit
+from cards import SUITS, card_name, card_suit
 from rules import winner_of_trick, legal_moves
 from strategy import SimpleStrategy  # Strategy class with choose_trump + play_card
 

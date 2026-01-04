@@ -1,5 +1,4 @@
-from cards import LEFT_BOWER_SUIT, card_rank, card_suit, effective_rank, is_trump
-from rules import legal_moves
+from cards import LEFT_BOWER_SUIT, card_rank, card_suit, effective_rank
 
 
 class SimpleStrategy:
