@@ -1,6 +1,8 @@
+import argparse
 import random
 from typing import Callable
 
+from cards import card_int
 from game import EuchreGame, SimpleStrategy
 
 """
@@ -67,18 +69,18 @@ def simulate_hand(
 
 # Example CLI
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, default=50000)
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    # Example card IDs — replace with actual Euchre constants
-    hand = [0, 1, 2, 3, 4]
-    upcard = 5
+    hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
+    upcard = "Ac"
     seat = 0
+
+    hand_int = card_int(hand)
+    upcard_int = card_int(upcard)
 
     """print("Simulate calling trump always")
     report_call = simulate_hand(
@@ -94,6 +96,12 @@ if __name__ == "__main__":
 
     # print("Simulate passing always")
     report_pass = simulate_hand(
-        hand, upcard, seat, args.trials, lambda *a, **k: None, args.seed, args.verbose
+        hand_int,
+        upcard_int,
+        seat,
+        args.trials,
+        lambda *a, **k: None,
+        args.seed,
+        args.verbose,
     )
     print(report_pass)

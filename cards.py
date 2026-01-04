@@ -31,6 +31,57 @@ def card_name(card):
     return CARD_NAME[card]
 
 
+def card_int(card_input):
+    """
+    Convert a card identifier (e.g., "9h", "Js") into an integer card ID.
+    If a list of card identifiers is passed, return a list of corresponding integer card IDs.
+    Assumes a specific mapping for card strings to integers.
+    """
+    card_map = {
+        "9C": 0,
+        "TC": 1,
+        "JC": 2,
+        "QC": 3,
+        "KC": 4,
+        "AC": 5,
+        "9D": 6,
+        "TD": 7,
+        "JD": 8,
+        "QD": 9,
+        "KD": 10,
+        "AD": 11,
+        "9H": 12,
+        "TH": 13,
+        "JH": 14,
+        "QH": 15,
+        "KH": 16,
+        "AH": 17,
+        "9S": 18,
+        "TS": 19,
+        "JS": 20,
+        "QS": 21,
+        "KS": 22,
+        "AS": 23,
+    }
+
+    if isinstance(card_input, int):
+        return card_input
+
+    elif isinstance(card_input, str):
+        return card_map[card_input.strip().upper()]
+
+    elif isinstance(card_input, list):
+        return [
+            card_map[card.strip().upper()] if isinstance(card, str) else card
+            for card in card_input
+        ]
+
+    else:
+        raise TypeError(
+            "Input must be a string, int, or a list of strings and/or ints."
+        )
+
+
 def is_right_bower(card, trump_suit):
     """
     Jack of trump suit.
