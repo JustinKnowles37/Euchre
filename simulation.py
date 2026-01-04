@@ -11,28 +11,23 @@ simulation.py — Monte Carlo hand simulations for Euchre EV
 class SimulationStats:
     def __init__(self):
         self.count = 0
-        self.maker_points = 0
-        self.tricks_makers = 0
-        self.tricks_defenders = 0
-        self.loner_success = 0
+        self.tricks = 0
+        self.points = 0
+        self.wins = 0
 
     def record(self, outcome: dict):
         self.count += 1
-        self.maker_points += outcome["maker_points"]
-        self.tricks_makers += outcome["tricks_makers"]
-        self.tricks_defenders += outcome["tricks_defenders"]
-        if outcome["loner_success"]:
-            self.loner_success += 1
+        self.tricks += outcome["tricks"]
+        self.points += outcome["points"]
+        if outcome["is_win"]:
+            self.wins += 1
 
     def report(self):
         return {
             "count": self.count,
-            "avg_maker_points": self.maker_points / self.count if self.count else 0,
-            "avg_maker_tricks": self.tricks_makers / self.count if self.count else 0,
-            "avg_defender_tricks": (
-                self.tricks_defenders / self.count if self.count else 0
-            ),
-            "loner_success_rate": self.loner_success / self.count if self.count else 0,
+            "avg_tricks": self.tricks / self.count if self.count else 0,
+            "avg_points": self.points / self.count if self.count else 0,
+            "win_rate": self.wins / self.count if self.count else 0,
         }
 
 
@@ -43,6 +38,7 @@ def simulate_hand(
     trials: int,
     call_override: Callable = None,
     rng_seed: int = None,
+    verbose: bool = False,
 ):
     """
     fixed_seat of 0 is dealer
@@ -51,7 +47,9 @@ def simulate_hand(
     rng = random.Random(rng_seed)
 
     for i in range(trials):
-        game = EuchreGame(strategies=[SimpleStrategy() for _ in range(4)])
+        game = EuchreGame(
+            strategies=[SimpleStrategy() for _ in range(4)], verbose=verbose
+        )
         """# override call_trump method if provided
         DOESN'T WORK AT THE MOMENT. WOULD NEED TO ADD LOGIC IN strategy.py
         if call_override:
@@ -73,11 +71,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, default=50000)
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
 
     # Example card IDs — replace with actual Euchre constants
-    example_hand = [0, 1, 2, 3, 4]
-    example_upcard = 5
+    hand = [0, 1, 2, 3, 4]
+    upcard = 5
+    seat = 0
 
     """print("Simulate calling trump always")
     report_call = simulate_hand(
@@ -93,11 +93,6 @@ if __name__ == "__main__":
 
     # print("Simulate passing always")
     report_pass = simulate_hand(
-        example_hand,
-        example_upcard,
-        fixed_seat=0,
-        trials=args.trials,
-        call_override=lambda *a, **k: None,
-        rng_seed=42,
+        hand, upcard, seat, args.trials, lambda *a, **k: None, 42, args.verbose
     )
     print(report_pass)

@@ -316,11 +316,12 @@ class EuchreGame:
             return p
         return start  # fallback
 
-    def score_hand(self, tricks_won):
+    def score_hand(self, tricks_won, fixed_seat=None):
         makers = self.makers
         defenders = 1 - makers
         maker_tricks = tricks_won[makers]
         maker_points = 0
+        fixed_team_points = 0
         loner_success = False
 
         # scoring logic
@@ -370,12 +371,29 @@ class EuchreGame:
 
         self.log(f"Score: Team 0 = {self.scores[0]}, Team 1 = {self.scores[1]}\n")
 
+        defender_points = -1 * maker_points
+        fixed_team = fixed_seat % 2 if fixed_seat is not None else None
+        if fixed_team is not None:
+            fixed_team_is_maker = fixed_team == makers
+            if fixed_team_is_maker:
+                fixed_team_points = maker_points
+                fixed_team_tricks = maker_tricks
+            else:
+                fixed_team_points = defender_points
+                fixed_team_tricks = tricks_won[defenders]
+        else:
+            # If not specified, set everything to 0/False
+            fixed_team_is_maker = False
+            fixed_team_tricks = 0
+            fixed_team_points = 0
+            fixed_team_is_win = False
+        fixed_team_is_win = fixed_team_points > 0
+
         return {
-            "maker_points": maker_points,
-            "makers_team": makers,
-            "tricks_makers": maker_tricks,
-            "tricks_defenders": tricks_won[defenders],
-            "loner_success": loner_success,
+            "is_maker": fixed_team_is_maker,
+            "tricks": fixed_team_tricks,
+            "points": fixed_team_points,
+            "is_win": fixed_team_is_win,
         }
 
     # ------------------------------------------------------------
@@ -408,7 +426,7 @@ class EuchreGame:
             tricks_won[team] += 1
             lead_player = winner
 
-        outcome = self.score_hand(tricks_won)
+        outcome = self.score_hand(tricks_won, fixed_seat)
         return outcome
 
     # ------------------------------------------------------------
