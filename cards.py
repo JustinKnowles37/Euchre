@@ -3,7 +3,7 @@ import random
 # ---------- CONSTANTS ----------
 
 SUITS = ["Clubs", "Diamonds", "Hearts", "Spades"]
-RANKS = ["9", "10", "J", "Q", "K", "A"]
+RANKS = ["9", "T", "J", "Q", "K", "A"]
 
 # Precompute lookup tables for speed
 CARD_TO_SUIT = [i // 6 for i in range(24)]
@@ -60,10 +60,10 @@ def effective_rank(card, trump_suit):
     Trump hierarchy:
         Right bower (8)
         Left bower  (7)
-        A (6), K (5), Q (4), J (3), 10 (2), 9 (1)
+        A (6), K (5), Q (4), J (3), T (2), 9 (1)
 
     Non-trump:
-        A (5), K (4), Q (3), J (2), 10 (1), 9 (0)
+        A (5), K (4), Q (3), J (2), T (1), 9 (0)
     """
     r = card_rank(card)
 

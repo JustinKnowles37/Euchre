@@ -171,13 +171,13 @@ def _test_rules():
 
     # Cards (computed as suit*6 + rank_idx):
     # 0 = 9 of Clubs
-    # 7 = 10 of Diamonds
+    # 7 = T of Diamonds
     # 2 = J of Clubs
     # 9 = Q of Diamonds  <-- this is the trump Q we want to test
 
     hands = [
         [0],  # Player 0: 9 of Clubs (leads)
-        [7],  # Player 1: 10 of Diamonds (trump)
+        [7],  # Player 1: T of Diamonds (trump)
         [2],  # Player 2: J of Clubs
         [9],  # Player 3: Q of Diamonds (trump, should win)
     ]
@@ -187,7 +187,7 @@ def _test_rules():
 
     winner, trick = play_trick(hands, leader, trump, s)
 
-    # With diamonds trump, player 3's Q of Diamonds should beat player 1's 10 of Diamonds
+    # With diamonds trump, player 3's Q of Diamonds should beat player 1's T of Diamonds
     assert winner == 3, f"expected winner 3 (Diamonds Q), got {winner}"
 
     print("rules.py internal tests passed.")
