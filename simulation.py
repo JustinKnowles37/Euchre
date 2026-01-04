@@ -72,6 +72,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--trials", type=int, default=50000)
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     # Example card IDs — replace with actual Euchre constants
@@ -93,6 +94,6 @@ if __name__ == "__main__":
 
     # print("Simulate passing always")
     report_pass = simulate_hand(
-        hand, upcard, seat, args.trials, lambda *a, **k: None, 42, args.verbose
+        hand, upcard, seat, args.trials, lambda *a, **k: None, args.seed, args.verbose
     )
     print(report_pass)
