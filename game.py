@@ -84,7 +84,7 @@ class EuchreGame:
     # ------------------------------------------------------------
     # TRUMP CALLING (each player's strategy decides)
     # ------------------------------------------------------------
-    def call_trump(self):
+    def call_trump(self, fixed_seat, force_suit, force_alone_choice):
         """
         Handles both rounds of trump calling with correct rotation.
         Supports going alone.
@@ -123,6 +123,8 @@ class EuchreGame:
                 upcard=upcard_visible,
                 is_dealer=is_dealer,
                 valid_suits=[upcard_suit],
+                force_suit=force_suit if i == fixed_seat else None,
+                force_alone_choice=force_alone_choice if i == fixed_seat else None,
             )
 
             if upcard_visible is not None:
@@ -186,6 +188,8 @@ class EuchreGame:
                 hand=hand,
                 is_dealer=(i == self.dealer),
                 valid_suits=remaining_suits,
+                force_suit=force_suit if i == fixed_seat else None,
+                force_alone_choice=force_alone_choice if i == fixed_seat else None,
             )
 
             if result is None:
@@ -220,7 +224,9 @@ class EuchreGame:
         suit, alone = strat.choose_trump(
             hand=self.hands[dealer],
             valid_suits=remaining_suits,
-            force=True,
+            force_call=True,
+            force_suit=force_suit if fixed_seat == 0 else None,
+            force_alone_choice=force_alone_choice if fixed_seat == 0 else None,
         )
 
         self.trump = suit
@@ -405,13 +411,15 @@ class EuchreGame:
         fixed_hand=None,
         fixed_upcard=None,
         fixed_seat=None,
+        force_suit=None,
+        force_alone_choice=None,
         rng=None,
     ):
         if is_fixed:
             self.deal_fixed_hand(fixed_hand, fixed_upcard, fixed_seat, rng)
         else:
             self.shuffle_and_deal()
-        self.call_trump()
+        self.call_trump(fixed_seat, force_suit, force_alone_choice)
         self.check_defend_alone()
 
         self.log(f"Trump is {SUITS[self.trump]}")
@@ -436,7 +444,7 @@ class EuchreGame:
         while self.scores[0] < winning_score and self.scores[1] < winning_score:
             self.log(f"Dealer is {self.players[self.dealer]}")
             self.play_hand()
-            # self.play_hand(True, [0, 1, 2, 3, 4], 5, 0, random.Random(42))
+            # self.play_hand(True, [0, 1, 2, 3, 4], 5, 0, None, None, random.Random(42))
             self.dealer = (self.dealer + 1) % NUM_PLAYERS
 
         winner = 0 if self.scores[0] >= winning_score else 1

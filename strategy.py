@@ -21,7 +21,14 @@ class Strategy(ABC):
 
     @abstractmethod
     def choose_trump(
-        self, hand, upcard=None, is_dealer=False, valid_suits=None, force=False
+        self,
+        hand,
+        upcard=None,
+        is_dealer=False,
+        valid_suits=None,
+        force=False,
+        force_suit=None,
+        force_alone_choice=None,
     ):
         """
         Decide whether to call trump.
@@ -32,6 +39,8 @@ class Strategy(ABC):
             is_dealer: bool
             valid_suits: list of suit ints allowed (for 2nd round), default None = all suits
             force: bool, if True must pick a suit
+            force_suit: int (optional), if specified, this suit will be chosen regardless of evaluation (if legal)
+            force_alone_choice: Optional[bool], True=force alone, False=force not alone, None=use strategy logic
         Returns:
             suit int 0-3 or None to pass
             None                  -> pass
@@ -75,7 +84,14 @@ class SimpleStrategy(Strategy):
 
     # Optional helpers used during bidding
     def choose_trump(
-        self, hand, upcard=None, is_dealer=False, valid_suits=None, force=False
+        self,
+        hand,
+        upcard=None,
+        is_dealer=False,
+        valid_suits=None,
+        force_call=False,
+        force_suit=None,
+        force_alone_choice=None,
     ):
         if valid_suits is None:
             valid_suits = [0, 1, 2, 3]
@@ -104,18 +120,29 @@ class SimpleStrategy(Strategy):
         if upcard is not None and card_suit(upcard) in valid_suits:
             suit_scores[card_suit(upcard)] += 2 if is_dealer else 1
 
-        best_suit = max(valid_suits, key=lambda s: suit_scores[s])
-        best_score = suit_scores[best_suit]
+        # ---- DETERMINE SUIT ----
+        if force_suit is not None:
+            if force_suit in valid_suits:
+                best_suit = force_suit
+            else:
+                return None
+        else:
+            best_suit = max(valid_suits, key=lambda s: suit_scores[s])
 
-        # Lower these thresholds for testing loner logic
-        threshold = 5 if not is_dealer else 4
-        if not force and best_score < threshold:
-            return None
+            best_score = suit_scores[best_suit]
 
-        # ---- GOING ALONE LOGIC ----
-        alone = suit_scores[best_suit] >= 7 and bower_count[best_suit] >= 1
+            threshold = 5 if not is_dealer else 4
+            if not force_call and best_score < threshold:
+                return None
 
-        return (best_suit, alone)
+        # ---- DETERMINE ALONE ----
+        if force_alone_choice is not None:
+            alone = force_alone_choice
+        else:
+            print(suit_scores[best_suit])
+            alone = suit_scores[best_suit] >= 7 and bower_count[best_suit] >= 1
+
+        return best_suit, alone
 
     def discard(self, hand, trump_suit):
         non_trumps = [c for c in hand if card_suit(c) != trump_suit]

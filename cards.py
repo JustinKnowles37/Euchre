@@ -82,6 +82,28 @@ def card_int(card_input):
         )
 
 
+def suit_int(suit_name):
+    """
+    Converts a suit name (e.g., "Clubs") to its corresponding integer value.
+
+    Parameters:
+        suit_name (str or None): The name of the suit (case-insensitive) or None.
+
+    Returns:
+        int or None: The integer corresponding to the suit, or None if the input is None.
+
+    Raises:
+        ValueError: If the suit name is invalid (not in SUITS).
+    """
+    if suit_name is None:
+        return None  # If the input is None, return None directly
+
+    suit_name = suit_name.strip().capitalize()  # Normalize input
+    if suit_name not in SUITS:
+        raise ValueError(f"Invalid suit name: {suit_name}. Must be one of {SUITS}.")
+    return SUITS.index(suit_name)
+
+
 def is_right_bower(card, trump_suit):
     """
     Jack of trump suit.

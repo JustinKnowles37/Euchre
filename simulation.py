@@ -2,7 +2,7 @@ import argparse
 import random
 from typing import Callable
 
-from cards import card_int
+from cards import card_int, suit_int
 from game import EuchreGame, SimpleStrategy
 
 """
@@ -38,7 +38,8 @@ def simulate_hand(
     fixed_upcard: int,
     fixed_seat: int,
     trials: int,
-    call_override: Callable = None,
+    force_suit: int = None,
+    force_alone_choice: bool = False,
     rng_seed: int = None,
     verbose: bool = False,
 ):
@@ -52,16 +53,19 @@ def simulate_hand(
         game = EuchreGame(
             strategies=[SimpleStrategy() for _ in range(4)], verbose=verbose
         )
-        """# override call_trump method if provided
-        DOESN'T WORK AT THE MOMENT. WOULD NEED TO ADD LOGIC IN strategy.py
-        if call_override:
-            for strat in game.strategies:
-                strat.choose_trump = call_override"""
 
         # Adjust fixed_seat relative to the dealer
         relative_seat = (fixed_seat + game.dealer) % 4
 
-        outcome = game.play_hand(True, fixed_hand, fixed_upcard, relative_seat, rng)
+        outcome = game.play_hand(
+            True,
+            fixed_hand,
+            fixed_upcard,
+            relative_seat,
+            force_suit,
+            force_alone_choice,
+            rng,
+        )
         stats.record(outcome)
 
     return stats.report()
@@ -75,13 +79,24 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
-    upcard = "Ac"
+    hand = ["Jc", "Js", "Ac", "Kc", "Qc"]
+    upcard = "9c"
     seat = 0
+    # seat = 1
+    # seat = 2
+    # seat = 3
+    force_suit_name = None
+    # force_suit_name = "clubs"
+    # force_suit_name = "diamonds"
+    # force_suit_name = "hearts"
+    # force_suit_name = "spades"
+    force_alone_choice = None
+    # force_alone_choice = False
+    # force_alone_choice = True
 
     hand_int = card_int(hand)
     upcard_int = card_int(upcard)
-
+    force_suit = suit_int(force_suit_name)
     """print("Simulate calling trump always")
     report_call = simulate_hand(
         example_hand,
@@ -100,7 +115,8 @@ if __name__ == "__main__":
         upcard_int,
         seat,
         args.trials,
-        lambda *a, **k: None,
+        force_suit,
+        force_alone_choice,
         args.seed,
         args.verbose,
     )
