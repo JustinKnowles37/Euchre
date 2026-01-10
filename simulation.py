@@ -79,8 +79,10 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    hand = ["Jc", "Js", "Ac", "Kc", "Qc"]
-    upcard = "9c"
+    # hand = ["Jc", "Js", "Ac", "Kc", "Qc"]
+    # upcard = "9c"
+    hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
+    upcard = "Ac"
     seat = 0
     # seat = 1
     # seat = 2

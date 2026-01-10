@@ -65,6 +65,16 @@ class Strategy(ABC):
         """
         pass
 
+    @staticmethod
+    def discard_lowest_non_trump(hand, trump_suit):
+        """
+        Discard the lowest non-trump card or the lowest trump card if no non-trumps are available.
+        """
+        non_trumps = [c for c in hand if card_suit(c) != trump_suit]
+        if non_trumps:
+            return min(non_trumps)
+        return min(hand)
+
     def __repr__(self):
         """
         Optional toString or debug functionality.
@@ -139,16 +149,12 @@ class SimpleStrategy(Strategy):
         if force_alone_choice is not None:
             alone = force_alone_choice
         else:
-            print(suit_scores[best_suit])
             alone = suit_scores[best_suit] >= 7 and bower_count[best_suit] >= 1
 
         return best_suit, alone
 
     def discard(self, hand, trump_suit):
-        non_trumps = [c for c in hand if card_suit(c) != trump_suit]
-        if non_trumps:
-            return min(non_trumps)
-        return min(hand)
+        return self.discard_lowest_non_trump(hand, trump_suit)
 
     def defend_alone(self, hand, trump_suit):
         strength = 0
