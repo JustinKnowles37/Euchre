@@ -99,6 +99,15 @@ class Strategy(ABC):
         pass
 
     @staticmethod
+    def _play_weakest_legal_card(legal, trump):
+        """
+        Plays the weakest legal card available.
+        """
+        # If we are following suit, pick the weakest legal card
+        # Strength is based on effective_rank for fast comparison.
+        return min(legal, key=lambda c: effective_rank(c, trump))
+
+    @staticmethod
     def _discard_lowest_non_trump(hand, trump_suit):
         """
         Discard the lowest non-trump card or the lowest trump card if no non-trumps are available.
@@ -121,9 +130,7 @@ class SimpleStrategy(Strategy):
     """
 
     def play_card(self, hand, legal, trick, trump):
-        # If we are following suit, pick the weakest legal card
-        # Strength is based on effective_rank for fast comparison.
-        return min(legal, key=lambda c: effective_rank(c, trump))
+        return self._play_weakest_legal_card(legal, trump)
 
     def __choose_trump(
         self,
