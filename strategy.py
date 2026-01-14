@@ -231,3 +231,50 @@ class SimpleStrategy(Strategy):
             suit_scores[card_suit(upcard)] += 2 if is_dealer else 1
 
         return suit_scores, bower_count
+
+
+class PassiveStrategy(Strategy):
+    """Always chooses the most passive option possible. Useful for debugging by forcing 3 players to always pass."""
+
+    def play_card(self, hand, legal, trick, trump):
+        return self._play_weakest_legal_card(legal, trump)
+
+    def choose_trump_first_round(self, hand, upcard, is_dealer=False, valid_suits=None):
+        return None
+
+    def choose_trump_second_round(self, hand, turned_down_card, valid_suits=None):
+        return None
+
+    def choose_trump_stuck_dealer(self, hand, turned_down_card, valid_suits=None):
+        if valid_suits is None:
+            valid_suits = [0, 1, 2, 3]
+        suit_scores = self.__calculate_hand_strength(hand, valid_suits)
+        best_suit = max(valid_suits, key=lambda s: suit_scores[s])
+        return best_suit, False
+
+    def discard(self, hand, trump_suit):
+        return self._discard_lowest_non_trump(hand, trump_suit)
+
+    def defend_alone(self, hand, trump_suit):
+        return False
+
+    def __calculate_hand_strength(self, hand, valid_suits):
+        suit_scores = [0, 0, 0, 0]
+
+        for c in hand:
+            s = card_suit(c)
+            r = card_rank(c)
+
+            if s not in valid_suits:
+                continue
+
+            if r == 2 and s == card_suit(c):  # Right bower
+                suit_scores[s] += 4
+            elif r == 2 and s == LEFT_BOWER_SUIT[s]:  # Left bower
+                suit_scores[s] += 3
+            elif r == 5:  # Ace
+                suit_scores[s] += 2
+            elif r in (4, 3):  # King / Queen
+                suit_scores[s] += 1
+
+        return suit_scores

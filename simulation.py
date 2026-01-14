@@ -3,7 +3,8 @@ import random
 from typing import Callable
 
 from cards import card_int, suit_int
-from game import EuchreGame, SimpleStrategy
+from game import EuchreGame
+from strategy import *
 
 """
 simulation.py — Monte Carlo hand simulations for Euchre EV
@@ -40,6 +41,7 @@ def simulate_hand(
     trials: int,
     force_suit: int = None,
     force_alone_choice: bool = False,
+    strategies: list[Strategy] = None,
     rng_seed: int = None,
     verbose: bool = False,
 ):
@@ -49,10 +51,11 @@ def simulate_hand(
     stats = SimulationStats()
     rng = random.Random(rng_seed)
 
+    if strategies is None:
+        strategies = [SimpleStrategy() for _ in range(4)]
+
     for i in range(trials):
-        game = EuchreGame(
-            strategies=[SimpleStrategy() for _ in range(4)], verbose=verbose
-        )
+        game = EuchreGame(strategies=strategies, verbose=verbose)
 
         outcome = game.play_hand(
             True,
@@ -80,8 +83,8 @@ if __name__ == "__main__":
     # upcard = "9c"
     hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
     upcard = "As"
-    # seat = 0
-    seat = 1
+    seat = 0
+    # seat = 1
     # seat = 2
     # seat = 3
     force_suit_name = None
@@ -89,13 +92,19 @@ if __name__ == "__main__":
     # force_suit_name = "diamonds"
     # force_suit_name = "hearts"
     # force_suit_name = "spades"
-    # force_alone_choice = None
+    force_alone_choice = None
     # force_alone_choice = False
-    force_alone_choice = True
+    # force_alone_choice = True
+    my_strat = PassiveStrategy()
+    others_strats = [PassiveStrategy() for _ in range(3)]
 
     hand_int = card_int(hand)
     upcard_int = card_int(upcard)
     force_suit = suit_int(force_suit_name)
+    strategies = others_strats.copy()
+    strategies.insert(seat, my_strat)
+    # print(strategies)
+    # exit()
     """print("Simulate calling trump always")
     report_call = simulate_hand(
         example_hand,
@@ -116,6 +125,7 @@ if __name__ == "__main__":
         args.trials,
         force_suit,
         force_alone_choice,
+        strategies,
         args.seed,
         args.verbose,
     )

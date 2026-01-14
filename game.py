@@ -288,8 +288,8 @@ class EuchreGame:
             force_suit=force_suit if fixed_seat == 0 else None,
             force_alone_choice=force_alone_choice if fixed_seat == 0 else None,
         )"""
-        suit, alone = strat.choose_trump_stuck_dealer(
-            hand=hand,
+        result = strat.choose_trump_stuck_dealer(
+            hand=self.hands[dealer],
             turned_down_card=self.turned_down_card,
             valid_suits=[force_suit] if is_forced_to_call_suit else remaining_suits,
         )
@@ -311,6 +311,7 @@ class EuchreGame:
                 f"[CALL_TRUMP] {self.players[i]} was forced {'to go alone' if force_alone_choice else 'not to go alone'}"
             )
 
+        suit, alone = result
         self.trump = suit
         self.makers = dealer % 2
         self.going_alone = alone
