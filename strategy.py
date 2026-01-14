@@ -20,27 +20,60 @@ class Strategy(ABC):
         pass
 
     @abstractmethod
-    def choose_trump(
+    def choose_trump_first_round(
         self,
         hand,
-        upcard=None,
+        upcard,
         is_dealer=False,
         valid_suits=None,
-        force=False,
-        force_suit=None,
-        force_alone_choice=None,
     ):
         """
-        Decide whether to call trump.
+        Decide whether to call trump in the first round of calling trump.
 
         Parameters:
             hand: list of cards
-            upcard: card int (optional) for first round
+            upcard: card int for upcard
             is_dealer: bool
-            valid_suits: list of suit ints allowed (for 2nd round), default None = all suits
-            force: bool, if True must pick a suit
-            force_suit: int (optional), if specified, this suit will be chosen regardless of evaluation (if legal)
-            force_alone_choice: Optional[bool], True=force alone, False=force not alone, None=use strategy logic
+            valid_suits: list of suit ints allowed, default None = all suits
+        Returns:
+            suit int 0-3 or None to pass
+            None                  -> pass
+            (suit, False)         -> call trump, not alone
+            (suit, True)          -> call trump and go alone
+        """
+        pass
+
+    @abstractmethod
+    def choose_trump_second_round(
+        self,
+        hand,
+        turned_down_card=None,
+        valid_suits=None,
+    ):
+        """
+        Decide whether to call trump in the first round of calling trump.
+
+        Parameters:
+            hand: list of cards
+            turned_down_card: card int for turned down card
+            valid_suits: list of suit ints allowed, default None = all suits
+        Returns:
+            suit int 0-3 or None to pass
+            None                  -> pass
+            (suit, False)         -> call trump, not alone
+            (suit, True)          -> call trump and go alone
+        """
+        pass
+
+    @abstractmethod
+    def choose_trump_stuck_dealer(self, hand, turned_down_card, valid_suits=None):
+        """
+        Decide whether to call trump in the first round of calling trump.
+
+        Parameters:
+            hand: list of cards
+            turned_down_card: card int for turned down card
+            valid_suits: list of suit ints allowed, default None = all suits
         Returns:
             suit int 0-3 or None to pass
             None                  -> pass
@@ -66,7 +99,7 @@ class Strategy(ABC):
         pass
 
     @staticmethod
-    def discard_lowest_non_trump(hand, trump_suit):
+    def _discard_lowest_non_trump(hand, trump_suit):
         """
         Discard the lowest non-trump card or the lowest trump card if no non-trumps are available.
         """
@@ -92,20 +125,80 @@ class SimpleStrategy(Strategy):
         # Strength is based on effective_rank for fast comparison.
         return min(legal, key=lambda c: effective_rank(c, trump))
 
-    # Optional helpers used during bidding
-    def choose_trump(
+    def __choose_trump(
         self,
         hand,
-        upcard=None,
+        upcard,
         is_dealer=False,
         valid_suits=None,
-        force_call=False,
-        force_suit=None,
-        force_alone_choice=None,
+        call_threshold=5,
+        call_threshold_dealer=4,
+        loner_threshold=7,
+        loner_bower_count_threshold=1,
     ):
         if valid_suits is None:
             valid_suits = [0, 1, 2, 3]
 
+        suit_scores, bower_count = self.__calculate_hand_strength(
+            hand, upcard, is_dealer, valid_suits
+        )
+
+        # ---- DETERMINE SUIT ----
+        best_suit = max(valid_suits, key=lambda s: suit_scores[s])
+
+        best_score = suit_scores[best_suit]
+
+        threshold = call_threshold if not is_dealer else call_threshold_dealer
+        if best_score < threshold:
+            return None
+
+        # ---- DETERMINE ALONE ----
+        alone = (
+            suit_scores[best_suit] >= loner_threshold
+            and bower_count[best_suit] >= loner_bower_count_threshold
+        )
+
+        return best_suit, alone
+
+    def choose_trump_first_round(self, hand, upcard, is_dealer=False, valid_suits=None):
+        return self.__choose_trump(hand, upcard, is_dealer, valid_suits, 5, 4, 7, 1)
+
+    def choose_trump_second_round(self, hand, turned_down_card, valid_suits=None):
+        # Assume same logic as in first round, just with no upcard and different valid_suits
+        # Will never be the dealer, since this is only called for the other 3 players
+        return self.choose_trump_first_round(hand, None, False, valid_suits)
+
+    def choose_trump_stuck_dealer(self, hand, turned_down_card, valid_suits=None):
+        # Assume same logic as in first round, just with no upcard and different valid_suits
+        # Will never be the dealer, since this is only called for the other 3 players
+        return self.__choose_trump(hand, None, True, valid_suits, -1, -1, 7, 1)
+
+    def discard(self, hand, trump_suit):
+        return self._discard_lowest_non_trump(hand, trump_suit)
+
+    def defend_alone(self, hand, trump_suit):
+        strength = 0
+
+        for c in hand:
+            s = card_suit(c)
+            r = card_rank(c)
+
+            # Right bower
+            if r == 2 and s == trump_suit:
+                strength += 4
+
+            # Left bower
+            elif r == 2 and s == LEFT_BOWER_SUIT[trump_suit]:
+                strength += 3
+
+            # Trump A / K
+            elif s == trump_suit and r >= 4:
+                strength += 2
+
+        # Conservative threshold (defending alone is rare)
+        return strength >= 7  # set to 0 for testing defend alone logic
+
+    def __calculate_hand_strength(self, hand, upcard, is_dealer, valid_suits):
         suit_scores = [0, 0, 0, 0]
         bower_count = [0, 0, 0, 0]
 
@@ -130,50 +223,4 @@ class SimpleStrategy(Strategy):
         if upcard is not None and card_suit(upcard) in valid_suits:
             suit_scores[card_suit(upcard)] += 2 if is_dealer else 1
 
-        # ---- DETERMINE SUIT ----
-        if force_suit is not None:
-            if force_suit in valid_suits:
-                best_suit = force_suit
-            else:
-                return None
-        else:
-            best_suit = max(valid_suits, key=lambda s: suit_scores[s])
-
-            best_score = suit_scores[best_suit]
-
-            threshold = 5 if not is_dealer else 4
-            if not force_call and best_score < threshold:
-                return None
-
-        # ---- DETERMINE ALONE ----
-        if force_alone_choice is not None:
-            alone = force_alone_choice
-        else:
-            alone = suit_scores[best_suit] >= 7 and bower_count[best_suit] >= 1
-
-        return best_suit, alone
-
-    def discard(self, hand, trump_suit):
-        return self.discard_lowest_non_trump(hand, trump_suit)
-
-    def defend_alone(self, hand, trump_suit):
-        strength = 0
-
-        for c in hand:
-            s = card_suit(c)
-            r = card_rank(c)
-
-            # Right bower
-            if r == 2 and s == trump_suit:
-                strength += 4
-
-            # Left bower
-            elif r == 2 and s == LEFT_BOWER_SUIT[trump_suit]:
-                strength += 3
-
-            # Trump A / K
-            elif s == trump_suit and r >= 4:
-                strength += 2
-
-        # Conservative threshold (defending alone is rare)
-        return strength >= 7  # set to 0 for testing defend alone logic
+        return suit_scores, bower_count

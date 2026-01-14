@@ -54,14 +54,11 @@ def simulate_hand(
             strategies=[SimpleStrategy() for _ in range(4)], verbose=verbose
         )
 
-        # Adjust fixed_seat relative to the dealer
-        relative_seat = (fixed_seat + game.dealer) % 4
-
         outcome = game.play_hand(
             True,
             fixed_hand,
             fixed_upcard,
-            relative_seat,
+            fixed_seat,
             force_suit,
             force_alone_choice,
             rng,
@@ -82,9 +79,9 @@ if __name__ == "__main__":
     # hand = ["Jc", "Js", "Ac", "Kc", "Qc"]
     # upcard = "9c"
     hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
-    upcard = "Ac"
-    seat = 0
-    # seat = 1
+    upcard = "As"
+    # seat = 0
+    seat = 1
     # seat = 2
     # seat = 3
     force_suit_name = None
@@ -92,9 +89,9 @@ if __name__ == "__main__":
     # force_suit_name = "diamonds"
     # force_suit_name = "hearts"
     # force_suit_name = "spades"
-    force_alone_choice = None
+    # force_alone_choice = None
     # force_alone_choice = False
-    # force_alone_choice = True
+    force_alone_choice = True
 
     hand_int = card_int(hand)
     upcard_int = card_int(upcard)
