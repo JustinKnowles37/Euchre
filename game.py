@@ -188,6 +188,7 @@ class EuchreGame:
             suit, alone = result
 
             self.trump = suit
+            self.maker = i
             self.makers = i % 2
             self.going_alone = alone
             self.loner = i
@@ -259,6 +260,7 @@ class EuchreGame:
             suit, alone = result
 
             self.trump = suit
+            self.maker = i
             self.makers = i % 2
             self.going_alone = alone
             self.loner = i
@@ -319,6 +321,7 @@ class EuchreGame:
 
         suit, alone = result
         self.trump = suit
+        self.maker = dealer
         self.makers = dealer % 2
         self.going_alone = alone
         self.loner = dealer
@@ -469,6 +472,7 @@ class EuchreGame:
         defender_points = -1 * maker_points
         fixed_team = fixed_seat % 2 if fixed_seat is not None else None
         if fixed_team is not None:
+            fixed_seat_is_maker = fixed_seat == self.maker
             fixed_team_is_maker = fixed_team == makers
             if fixed_team_is_maker:
                 fixed_team_points = maker_points
@@ -478,6 +482,7 @@ class EuchreGame:
                 fixed_team_tricks = tricks_won[defenders]
         else:
             # If not specified, set everything to 0/False
+            fixed_seat_is_maker = False
             fixed_team_is_maker = False
             fixed_team_tricks = 0
             fixed_team_points = 0
@@ -485,7 +490,8 @@ class EuchreGame:
         fixed_team_is_win = fixed_team_points > 0
 
         return {
-            "is_maker": fixed_team_is_maker,
+            "is_maker": fixed_seat_is_maker,
+            "is_maker_team": fixed_team_is_maker,
             "tricks": fixed_team_tricks,
             "points": fixed_team_points,
             "is_win": fixed_team_is_win,
