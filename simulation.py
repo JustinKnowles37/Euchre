@@ -13,7 +13,16 @@ simulation.py — Monte Carlo hand simulations for Euchre EV
 
 
 class SimulationStats:
-    def __init__(self):
+    def __init__(self, split_by_maker: bool = False):
+        # Optional to track separately by whether or not we actually called trump
+        self.split_by_maker = split_by_maker
+        if split_by_maker:
+            self.by_maker = {
+                True: SimulationStats(split_by_maker=False),
+                False: SimulationStats(split_by_maker=False),
+            }
+            return
+
         self.trials = 0
         self.tricks = 0
         self.points = 0
@@ -21,6 +30,10 @@ class SimulationStats:
         self.point_counts = {score: 0 for score in (-4, -2, -1, 1, 2, 4)}
 
     def record(self, outcome: dict):
+        if self.split_by_maker:
+            self.by_maker[outcome["is_maker"]].record(outcome)
+            return
+
         points = outcome["points"]
         self.trials += 1
         self.tricks += outcome["tricks"]
@@ -30,6 +43,13 @@ class SimulationStats:
         self.point_counts[points] += 1
 
     def report(self):
+        if self.split_by_maker:
+            rows = []
+            for maker, stats in self.by_maker.items():
+                base = stats.report()
+                rows.append({"Maker": maker, **base})
+            return rows
+
         trials = self.trials or 1  # Avoid errors if 0 trials
         return {
             "trials": self.trials,
@@ -50,17 +70,18 @@ def simulate_hand(
     fixed_hand: list[int],
     fixed_upcard: int,
     fixed_seat: int,
-    trials: int,
     force_suit_choice: int = None,
     force_alone_choice: bool = False,
     strategies: list[Strategy] = None,
+    split_by_maker: bool = False,
+    trials: int = 50_000,
     rng_seed: int = None,
     verbose: bool = False,
 ):
     """
     fixed_seat of 0 is dealer
     """
-    stats = SimulationStats()
+    stats = SimulationStats(split_by_maker=split_by_maker)
     rng = random.Random(rng_seed)
 
     if strategies is None:
@@ -86,15 +107,22 @@ def simulate_hand(
 # Example CLI
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--split-maker",
+        action="store_true",
+        help="Split results by whether player was the maker",
+    )
     parser.add_argument("--trials", type=int, default=50000)
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
-    hand = ["Jc", "Js", "Jh", "Jd", "9d"]
-    upcard = "9h"
+    # hand = ["Jc", "Js", "Jh", "Jd", "9d"]
+    # upcard = "9h"
     # hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
     # upcard = "Ac"
+    hand = ["Jc", "Ac", "9c", "Ah", "Qd"]
+    upcard = "9h"
     seat = 0
     # seat = 1
     # seat = 2
@@ -146,6 +174,9 @@ if __name__ == "__main__":
     # Collect results for all combinations
     results = []
     for force_suit_choice in force_suit_choices:
+        suit_choice_str = (
+            SUITS[force_suit_choice] if force_suit_choice != -1 else "Pass"
+        )
         for force_alone_choice in force_alone_choices:
             # Dealer can't always pass, so no reason to simulate this
             if seat == 0 and force_suit_choice == -1:
@@ -154,21 +185,20 @@ if __name__ == "__main__":
                 hand_int,
                 upcard_int,
                 seat,
-                args.trials,
                 force_suit_choice,
                 force_alone_choice,
                 strategies,
+                args.split_maker,
+                args.trials,
                 args.seed,
                 args.verbose,
             )
-            result = {
-                "Suit to Call": (
-                    SUITS[force_suit_choice] if force_suit_choice != -1 else "Pass"
-                ),
-                "Alone": force_alone_choice,
-            } | result
-            results.append(result)
+            base = {"suit_choice": suit_choice_str, "alone_choice": force_alone_choice}
+            rows = result if isinstance(result, list) else [result]
+            for row in rows:
+                results.append(base | row)
 
     # Print results as a table
     # print(tabulate(results, headers="keys", tablefmt="grid"))
+    pd.set_option("display.float_format", "{:.3f}".format)
     print(pd.DataFrame(results))
