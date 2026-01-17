@@ -114,7 +114,11 @@ class EuchreGame:
             upcard_visible = self.upcard if is_dealer else None
 
             is_fixed_seat = fixed_seat == (offset + 1) % 4
-            is_forced_to_pass = is_fixed_seat and force_suit_choice == -1
+            is_forced_to_pass = (
+                is_fixed_seat
+                and force_suit_choice is not None
+                and force_suit_choice != upcard_suit
+            )
             is_forced_to_call_suit = is_fixed_seat and force_suit_choice == upcard_suit
             is_forced_alone_choice = is_fixed_seat and force_alone_choice is not None
 
