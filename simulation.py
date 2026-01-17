@@ -39,7 +39,7 @@ def simulate_hand(
     fixed_upcard: int,
     fixed_seat: int,
     trials: int,
-    force_suit: int = None,
+    force_suit_choice: int = None,
     force_alone_choice: bool = False,
     strategies: list[Strategy] = None,
     rng_seed: int = None,
@@ -62,7 +62,7 @@ def simulate_hand(
             fixed_hand,
             fixed_upcard,
             fixed_seat,
-            force_suit,
+            force_suit_choice,
             force_alone_choice,
             rng,
         )
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # hand = ["Jc", "Js", "Ac", "Kc", "Qc"]
     # upcard = "9c"
     hand = ["9c", "Tc", "Jc", "Qc", "Kc"]
-    upcard = "As"
+    upcard = "Ac"
     seat = 0
     # seat = 1
     # seat = 2
@@ -92,15 +92,17 @@ if __name__ == "__main__":
     # force_suit_name = "diamonds"
     # force_suit_name = "hearts"
     # force_suit_name = "spades"
+    # force_suit_name = "pass"
     force_alone_choice = None
     # force_alone_choice = False
     # force_alone_choice = True
-    my_strat = PassiveStrategy()
+    # my_strat = PassiveStrategy()
+    my_strat = SimpleStrategy()
     others_strats = [PassiveStrategy() for _ in range(3)]
 
     hand_int = card_int(hand)
     upcard_int = card_int(upcard)
-    force_suit = suit_int(force_suit_name)
+    force_suit_choice = suit_int(force_suit_name)
     strategies = others_strats.copy()
     strategies.insert(seat, my_strat)
     # print(strategies)
@@ -123,7 +125,7 @@ if __name__ == "__main__":
         upcard_int,
         seat,
         args.trials,
-        force_suit,
+        force_suit_choice,
         force_alone_choice,
         strategies,
         args.seed,

@@ -99,6 +99,8 @@ def suit_int(suit_name):
         return None  # If the input is None, return None directly
 
     suit_name = suit_name.strip().capitalize()  # Normalize input
+    if suit_name == "Pass":
+        return -1
     if suit_name not in SUITS:
         raise ValueError(f"Invalid suit name: {suit_name}. Must be one of {SUITS}.")
     return SUITS.index(suit_name)

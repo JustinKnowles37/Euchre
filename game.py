@@ -84,7 +84,7 @@ class EuchreGame:
     # ------------------------------------------------------------
     # TRUMP CALLING (each player's strategy decides)
     # ------------------------------------------------------------
-    def call_trump(self, fixed_seat, force_suit, force_alone_choice):
+    def call_trump(self, fixed_seat, force_suit_choice, force_alone_choice):
         """
         Handles both rounds of trump calling with correct rotation.
         Supports going alone.
@@ -112,31 +112,27 @@ class EuchreGame:
             hand = self.hands[i]
             is_dealer = i == self.dealer
             upcard_visible = self.upcard if is_dealer else None
-            is_forced_to_call_suit = (
-                fixed_seat == (offset + 1) % 4 and force_suit == upcard_suit
-            )
-            is_forced_alone_choice = (
-                fixed_seat == (offset + 1) % 4 and force_alone_choice is not None
-            )
+
+            is_fixed_seat = fixed_seat == (offset + 1) % 4
+            is_forced_to_pass = is_fixed_seat and force_suit_choice == -1
+            is_forced_to_call_suit = is_fixed_seat and force_suit_choice == upcard_suit
+            is_forced_alone_choice = is_fixed_seat and force_alone_choice is not None
 
             self.log(
                 f"[CALL_TRUMP] {self.players[i]} {'(DEALER)' if is_dealer else ''} hand: "
                 + ", ".join(card_name(c) for c in hand)
             )
 
+            if is_forced_to_pass:
+                self.log(
+                    f"[CALL_TRUMP] {self.players[i]} is forced to pass in the first round"
+                )
+                continue
+
             if upcard_visible is not None:
                 self.log(
                     f"[CALL_TRUMP] {self.players[i]} sees upcard {card_name(self.upcard)}"
                 )
-
-            """result = strat.choose_trump(
-                hand=hand,
-                upcard=upcard_visible,
-                is_dealer=is_dealer,
-                valid_suits=[upcard_suit],
-                force_suit=force_suit if i == fixed_seat else None,
-                force_alone_choice=force_alone_choice if i == fixed_seat else None,
-            )"""
 
             result = strat.choose_trump_first_round(
                 hand=hand,
@@ -214,33 +210,35 @@ class EuchreGame:
             i = (start_player + offset) % 4
             strat = self.strategies[i]
             hand = self.hands[i]
-            is_forced_to_call_suit = (
-                fixed_seat == (offset + 1) % 4 and force_suit in remaining_suits
-            )
-            is_forced_alone_choice = (
-                fixed_seat == (offset + 1) % 4 and force_alone_choice is not None
-            )
 
-            """result = strat.choose_trump(
-                hand=hand,
-                is_dealer=(i == self.dealer),
-                valid_suits=remaining_suits,
-                force_suit=force_suit if i == fixed_seat else None,
-                force_alone_choice=force_alone_choice if i == fixed_seat else None,
-            )"""
+            is_fixed_seat = fixed_seat == (offset + 1) % 4
+            is_forced_to_pass = is_fixed_seat and force_suit_choice == -1
+            is_forced_to_call_suit = (
+                is_fixed_seat and force_suit_choice in remaining_suits
+            )
+            is_forced_alone_choice = is_fixed_seat and force_alone_choice is not None
+
+            if is_forced_to_pass:
+                self.log(
+                    f"[CALL_TRUMP] {self.players[i]} is forced to pass in the second round"
+                )
+                continue
+
             result = strat.choose_trump_second_round(
                 hand=hand,
                 turned_down_card=self.turned_down_card,
-                valid_suits=[force_suit] if is_forced_to_call_suit else remaining_suits,
+                valid_suits=(
+                    [force_suit_choice] if is_forced_to_call_suit else remaining_suits
+                ),
             )
 
             # If forced to call trump here, force that result, keeping the strategy's loner logic
             # We still always need to run strat.choose_trump_second_round() to determine loner decision
             if is_forced_to_call_suit:
-                # result[1] only works since we know they could only call alone on force_suit
-                result = (force_suit, result[1] if result is not None else False)
+                # result[1] only works since we know they could only call alone on force_suit_choice
+                result = (force_suit_choice, result[1] if result is not None else False)
                 self.log(
-                    f"[CALL_TRUMP] {self.players[i]} was forced to call {SUITS[force_suit]}"
+                    f"[CALL_TRUMP] {self.players[i]} was forced to call {SUITS[force_suit_choice]}"
                 )
 
             # If going alone is forced to True/False and we want to call at all, force that result
@@ -278,30 +276,34 @@ class EuchreGame:
         # ----------------------------
         dealer = self.dealer
         strat = self.strategies[dealer]
-        is_forced_to_call_suit = fixed_seat == 0 and force_suit in remaining_suits
+        is_forced_to_call_suit = (
+            fixed_seat == 0 and force_suit_choice in remaining_suits
+        )
         is_forced_alone_choice = fixed_seat == 0 and force_alone_choice is not None
 
         """suit, alone = strat.choose_trump(
             hand=self.hands[dealer],
             valid_suits=remaining_suits,
             force_call=True,
-            force_suit=force_suit if fixed_seat == 0 else None,
+            force_suit_choice=force_suit_choice if fixed_seat == 0 else None,
             force_alone_choice=force_alone_choice if fixed_seat == 0 else None,
         )"""
         result = strat.choose_trump_stuck_dealer(
             hand=self.hands[dealer],
             turned_down_card=self.turned_down_card,
-            valid_suits=[force_suit] if is_forced_to_call_suit else remaining_suits,
+            valid_suits=(
+                [force_suit_choice] if is_forced_to_call_suit else remaining_suits
+            ),
         )
 
         # If forced to call trump here, force that result, keeping the strategy's loner logic
         # We still always need to run strat.choose_trump_stuck_dealer() to determine loner decision
         if is_forced_to_call_suit:
-            # result[1] only works since we know they could only call alone on force_suit
+            # result[1] only works since we know they could only call alone on force_suit_choice
             # result can't be None
-            result = (force_suit, result[1])
+            result = (force_suit_choice, result[1])
             self.log(
-                f"[CALL_TRUMP] {self.players[i]} was forced to call {SUITS[force_suit]}"
+                f"[CALL_TRUMP] {self.players[i]} was forced to call {SUITS[force_suit_choice]}"
             )
 
         # If going alone is forced to True/False, force that result
@@ -494,7 +496,7 @@ class EuchreGame:
         fixed_hand=None,
         fixed_upcard=None,
         fixed_seat=None,
-        force_suit=None,
+        force_suit_choice=None,
         force_alone_choice=None,
         rng=None,
     ):
@@ -508,7 +510,7 @@ class EuchreGame:
             self.deal_fixed_hand(fixed_hand, fixed_upcard, relative_fixed_seat, rng)
         else:
             self.shuffle_and_deal()
-        self.call_trump(relative_fixed_seat, force_suit, force_alone_choice)
+        self.call_trump(relative_fixed_seat, force_suit_choice, force_alone_choice)
         self.check_defend_alone()
 
         self.log(f"Trump is {SUITS[self.trump]}")
