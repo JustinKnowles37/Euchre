@@ -1,4 +1,0 @@
-update strategy to be more complex
-If dealer is stuck, logging shows difference from when dealer wants to choose it in second round - can probably clean this up to speed up sim time
-
-Improve strategy.py class structure. Right now some of the rules are located in SimpleStrategy()
