@@ -85,25 +85,33 @@ def card_int(card_input):
 def suit_int(suit_name):
     """
     Converts a suit name (e.g., "Clubs") to its corresponding integer value.
+    Returns -1 if suit name is "Pass".
 
     Parameters:
-        suit_name (str or None): The name of the suit (case-insensitive) or None.
+        suit_name (str | list[str] | None): The name(s) of the suit (case-insensitive) or None.
 
     Returns:
-        int or None: The integer corresponding to the suit, or None if the input is None.
+        int | list[int] | None: The integer(s) corresponding to the suit, or None if the input is None.
 
     Raises:
         ValueError: If the suit name is invalid (not in SUITS).
     """
-    if suit_name is None:
-        return None  # If the input is None, return None directly
 
-    suit_name = suit_name.strip().capitalize()  # Normalize input
-    if suit_name == "Pass":
-        return -1
-    if suit_name not in SUITS:
-        raise ValueError(f"Invalid suit name: {suit_name}. Must be one of {SUITS}.")
-    return SUITS.index(suit_name)
+    def _convert(s):
+        if s is None:
+            return None  # If the input is None, return None directly
+        s = s.strip().capitalize()  # Normalize input
+        if s == "Pass":
+            return -1
+        if s not in SUITS:
+            raise ValueError(f"Invalid suit name: {s}. Must be one of {SUITS}.")
+        return SUITS.index(s)
+
+    # Vectorized behavior
+    if isinstance(suit_name, (list, tuple)):
+        return [_convert(s) for s in suit_name]
+
+    return _convert(suit_name)
 
 
 def is_right_bower(card, trump_suit):
