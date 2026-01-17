@@ -98,26 +98,14 @@ if __name__ == "__main__":
     # force_alone_choice = True
     # my_strat = PassiveStrategy()
     my_strat = SimpleStrategy()
-    others_strats = [PassiveStrategy() for _ in range(3)]
+    # others_strats = [PassiveStrategy() for _ in range(3)]
+    others_strats = [SimpleStrategy() for _ in range(3)]
 
     hand_int = card_int(hand)
     upcard_int = card_int(upcard)
     force_suit_choice = suit_int(force_suit_name)
     strategies = others_strats.copy()
     strategies.insert(seat, my_strat)
-    # print(strategies)
-    # exit()
-    """print("Simulate calling trump always")
-    report_call = simulate_hand(
-        example_hand,
-        example_upcard,
-        fixed_seat=0,
-        trials=args.trials,
-        # call_override=lambda *a, **k: (0, False),
-        call_override=lambda *a, **k: None,
-        rng_seed=42,
-    )
-    print(report_call)"""
 
     # print("Simulate passing always")
     report_pass = simulate_hand(
