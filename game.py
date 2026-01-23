@@ -188,6 +188,7 @@ class EuchreGame:
             suit, alone = result
 
             self.trump = suit
+            self.call_round = 1
             self.maker = i
             self.makers = i % 2
             self.going_alone = alone
@@ -210,6 +211,7 @@ class EuchreGame:
         # ----------------------------
         remaining_suits = [s for s in range(4) if s != upcard_suit]
         self.turned_down_card = self.upcard
+        self.call_round = 2
 
         for offset in range(3):
             i = (start_player + offset) % 4
@@ -490,6 +492,7 @@ class EuchreGame:
         fixed_team_is_win = fixed_team_points > 0
 
         return {
+            "call_round": self.call_round,
             "is_maker": fixed_seat_is_maker,
             "is_maker_team": fixed_team_is_maker,
             "tricks": fixed_team_tricks,
