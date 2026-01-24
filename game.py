@@ -493,6 +493,7 @@ class EuchreGame:
 
         return {
             "call_round": self.call_round,
+            "maker": self.maker,
             "is_maker": fixed_seat_is_maker,
             "is_maker_team": fixed_team_is_maker,
             "tricks": fixed_team_tricks,
