@@ -10,6 +10,7 @@ CARD_TO_SUIT = [i // 6 for i in range(24)]
 CARD_TO_RANK = [i % 6 for i in range(24)]
 CARD_NAME = [f"{RANKS[r]} of {SUITS[s]}" for s in range(4) for r in range(6)]
 CARD_COLOR = [0, 1, 1, 0]  # Clubs/Spades black=0, Diamonds/Hearts red=1
+PASS_SUIT = -1
 
 # Left-bower mapping (same color suit)
 # Clubs ↔ Spades, Diamonds ↔ Hearts
@@ -85,7 +86,6 @@ def card_int(card_input):
 def suit_int(suit_name):
     """
     Converts a suit name (e.g., "Clubs") to its corresponding integer value.
-    Returns -1 if suit name is "Pass".
 
     Parameters:
         suit_name (str | list[str] | None): The name(s) of the suit (case-insensitive) or None.
@@ -102,7 +102,7 @@ def suit_int(suit_name):
             return None  # If the input is None, return None directly
         s = s.strip().capitalize()  # Normalize input
         if s == "Pass":
-            return -1
+            return PASS_SUIT
         if s not in SUITS:
             raise ValueError(f"Invalid suit name: {s}. Must be one of {SUITS}.")
         return SUITS.index(s)
