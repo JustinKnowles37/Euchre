@@ -325,8 +325,8 @@ if __name__ == "__main__":
     args = read_args()
 
     # Setup
-    my_strat = SimpleStrategy()
-    others = [SimpleStrategy() for _ in range(3)]
+    my_strat = Strategy2()
+    others = [Strategy2() for _ in range(3)]
     hand_str = ["Jc", "Ac", "9c", "Ah", "Qd"]
     upcard_str = "9h"
 
