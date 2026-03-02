@@ -1,5 +1,5 @@
 import random
-from cards import SUITS, card_name, card_suit
+from cards import card_name, card_suit, PASS_SUIT, SUITS
 from rules import winner_of_trick, legal_moves
 from strategy import SimpleStrategy
 
@@ -25,16 +25,19 @@ class EuchreGame:
         else:
             self.log = lambda *args, **kwargs: None
 
-        self.hands = [[] for _ in range(NUM_PLAYERS)]
-        self.trump = None
-        self.upcard = None
-        self.scores = [0, 0]  # team 0 = players 0 & 2, team 1 = players 1 & 3
-        self.dealer = 0
-        self.going_alone = False
-        self.loner = None
-        self.sitting_out = None
-        self.defending_alone = False
-        self.defender_loner = None
+        self.hands = [[] for _ in range(NUM_PLAYERS)]  # All players' hands
+        self.trump = None  # Trump suit
+        self.upcard = None  # Upcard
+        self.scores = [
+            0,
+            0,
+        ]  # Game score. team 0 = players 0 & 2, team 1 = players 1 & 3
+        self.dealer = 0  # Which player is the dealer
+        self.going_alone = False  # Whether someone is going alone
+        self.loner = None  # Player who calls alone
+        self.sitting_out = None  # Player who sits out when partner calls alone
+        self.defending_alone = False  # Whether someone is defending alone
+        self.defender_loner = None  # Player who defends alone
         self.two_player_hand = False  # True if maker and defender both go alone
 
     # ------------------------------------------------------------
@@ -192,7 +195,7 @@ class EuchreGame:
             self.maker = i
             self.makers = i % 2
             self.going_alone = alone
-            self.loner = i
+            self.loner = self.maker if self.going_alone else None
             self.sitting_out = (i + 2) % 4 if alone else None
 
             self.log(
@@ -219,7 +222,7 @@ class EuchreGame:
             hand = self.hands[i]
 
             is_fixed_seat = fixed_seat == (offset + 1) % 4
-            is_forced_to_pass = is_fixed_seat and force_suit_choice == -1
+            is_forced_to_pass = is_fixed_seat and force_suit_choice == PASS_SUIT
             is_forced_to_call_suit = (
                 is_fixed_seat and force_suit_choice in remaining_suits
             )
@@ -265,7 +268,7 @@ class EuchreGame:
             self.maker = i
             self.makers = i % 2
             self.going_alone = alone
-            self.loner = i
+            self.loner = self.maker if self.going_alone else None
             self.sitting_out = (i + 2) % 4 if alone else None
 
             self.log(
@@ -326,7 +329,7 @@ class EuchreGame:
         self.maker = dealer
         self.makers = dealer % 2
         self.going_alone = alone
-        self.loner = dealer
+        self.loner = self.maker if self.going_alone else None
         self.sitting_out = (dealer + 2) % 4 if alone else None
 
         self.log(
@@ -369,7 +372,7 @@ class EuchreGame:
     # ------------------------------------------------------------
     # PLAY A TRICK
     # ------------------------------------------------------------
-    def play_trick(self, lead_player):
+    def play_trick(self, lead_player, force_lead):
         trick = []
         players_in_trick = []
 
@@ -391,6 +394,9 @@ class EuchreGame:
             lm = legal_moves(hand, led_card, self.trump)
 
             card = strat.play_card(hand, lm, trick, self.trump)
+            if force_lead is not None and force_lead in hand and p == lead_player:
+                card = force_lead
+
             hand.remove(card)
             trick.append(card)
 
@@ -422,14 +428,12 @@ class EuchreGame:
         maker_tricks = tricks_won[makers]
         maker_points = 0
         fixed_team_points = 0
-        loner_success = False
 
         # scoring logic
         if self.going_alone:
             if maker_tricks == 5:
                 # Lone hand sweep
                 maker_points = 4
-                loner_success = True
                 self.scores[makers] += 4
                 self.log(
                     f"{self.players[self.loner]} wins ALL 5 tricks alone! +4 points"
@@ -492,8 +496,12 @@ class EuchreGame:
         fixed_team_is_win = fixed_team_points > 0
 
         return {
+            "trump": self.trump,
             "call_round": self.call_round,
             "maker": self.maker,
+            "is_loner": self.loner is not None,
+            "alone_caller": self.loner,
+            "alone_defender": self.defender_loner,
             "is_maker": fixed_seat_is_maker,
             "is_maker_team": fixed_team_is_maker,
             "tricks": fixed_team_tricks,
@@ -512,6 +520,7 @@ class EuchreGame:
         fixed_seat=None,
         force_suit_choice=None,
         force_alone_choice=None,
+        force_lead=None,
         rng=None,
     ):
         # Adjust fixed_seat relative to the dealer
@@ -533,8 +542,7 @@ class EuchreGame:
         tricks_won = [0, 0]  # team 0, team 1
 
         for _ in range(HAND_SIZE):
-            winner = self.play_trick(lead_player)
-
+            winner = self.play_trick(lead_player, force_lead)
             team = winner % 2
             tricks_won[team] += 1
             lead_player = winner
@@ -549,7 +557,7 @@ class EuchreGame:
         while self.scores[0] < winning_score and self.scores[1] < winning_score:
             self.log(f"Dealer is {self.players[self.dealer]}")
             self.play_hand()
-            # self.play_hand(True, [0, 1, 2, 3, 4], 5, 0, None, None, random.Random(42))
+            # self.play_hand(True, [0, 1, 2, 3, 4], 5, 0, None, None, None, random.Random(42))
             self.dealer = (self.dealer + 1) % NUM_PLAYERS
 
         winner = 0 if self.scores[0] >= winning_score else 1

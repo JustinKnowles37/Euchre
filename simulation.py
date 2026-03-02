@@ -5,21 +5,14 @@ simulation.py — Monte Carlo hand simulations for Euchre EV
 import argparse
 import random
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from cards import card_int, CARD_NAME, card_suit, SUITS
+from cards import card_int, CARD_NAME, card_suit, PASS_SUIT, SUITS
 from game import EuchreGame
+from rules import POINT_VALUES
 from strategy import *
-
-
-# =========================
-# Constants
-# =========================
-
-PASS_SUIT = -1
-POINT_VALUES = (-4, -2, -1, 1, 2, 4)
 
 
 # =========================
@@ -135,6 +128,12 @@ def suit_label(suit: int) -> str:
     return SUITS[suit] if suit != PASS_SUIT else "Pass"
 
 
+def lead_label(lead):
+    if lead is None:
+        return None
+    return CARD_NAME[lead]
+
+
 def hand_to_str(hand: list[int]) -> str:
     return ", ".join(str(CARD_NAME[card]) for card in hand)
 
@@ -145,14 +144,18 @@ def hand_to_str(hand: list[int]) -> str:
 
 
 def first_round_choices(upcard_suit: int):
-    return [(upcard_suit, False), (upcard_suit, True), (PASS_SUIT, None)]
+    return [
+        (upcard_suit, False, None),
+        (upcard_suit, True, None),
+        (PASS_SUIT, None, None),
+    ]
 
 
 def second_round_choices(upcard_suit: int, seat: int):
     remaining = [s for s in range(4) if s != upcard_suit]
-    choices = [(s, a) for s in remaining for a in (False, True)]
+    choices = [(s, a, None) for s in remaining for a in (False, True)]
     if seat != 0:
-        choices.append((PASS_SUIT, None))
+        choices.append((PASS_SUIT, None, None))
     return choices
 
 
@@ -167,7 +170,9 @@ def simulate_hand(
     seat: int,
     suit: Optional[int],
     alone: Optional[bool],
+    lead: Optional[int],
     config: SimulationConfig,
+    results_filter: Dict[str, Any],
 ):
     stats = SimulationStats(split_by_maker=config.split_by_maker)
     rng = random.Random(config.seed)
@@ -180,8 +185,16 @@ def simulate_hand(
 
     for _ in range(config.trials):
         game = EuchreGame(strategies=strategies, verbose=config.verbose)
-        outcome = game.play_hand(True, hand, upcard, seat, suit, alone, rng)
-        stats.record(outcome)
+        outcome = game.play_hand(True, hand, upcard, seat, suit, alone, lead, rng)
+
+        record_outcome = True
+        for condition in results_filter:
+            if outcome[condition] != results_filter[condition]:
+                record_outcome = False
+                break
+
+        if record_outcome:
+            stats.record(outcome)
 
     return stats.report()
 
@@ -192,12 +205,16 @@ def simulate_hand(
 
 
 def run_choices(hand, upcard, seat, choices, config):
+    results_filter = {}
     results = []
-    for suit, alone in choices:
-        result = simulate_hand(hand, upcard, seat, suit, alone, config)
+    for suit, alone, lead in choices:
+        result = simulate_hand(
+            hand, upcard, seat, suit, alone, lead, config, results_filter
+        )
         base = {
             "suit_choice": suit_label(suit),
             "alone_choice": alone,
+            "lead_choice": lead_label(lead),
         }
         rows = result if isinstance(result, list) else [result]
         results.extend(base | row for row in rows)
@@ -226,8 +243,14 @@ def simulate_all_choices(hand, upcard, seat, config: SimulationConfig):
         for alone in alones:
             if seat == 0 and suit == PASS_SUIT:
                 continue
-            choices.append((suit, alone))
+            choices.append((suit, alone, None))
 
+    return run_choices(hand, upcard, seat, choices, config)
+
+
+def simulate_first_round_trump_choice(hand, upcard, seat, config: SimulationConfig):
+    upcard_suit = card_suit(upcard)
+    choices = first_round_choices(upcard_suit)
     return run_choices(hand, upcard, seat, choices, config)
 
 
@@ -237,9 +260,49 @@ def simulate_second_round_trump_choice(hand, upcard, seat, config: SimulationCon
     return run_choices(hand, upcard, seat, choices, config)
 
 
-def simulate_first_round_trump_choice(hand, upcard, seat, config: SimulationConfig):
-    upcard_suit = card_suit(upcard)
-    return run_choices(hand, upcard, seat, first_round_choices(upcard_suit), config)
+def simulate_first_lead(
+    hand,
+    upcard,
+    trump,
+    alone,
+    maker,
+    call_round,
+    config: SimulationConfig,
+):
+    seat = 1
+    results_filter = {
+        "trump": trump,
+        "call_round": call_round,
+        "maker": maker,
+        "is_loner": alone,
+    }
+
+    # Ensure we do or do not want to call, so that we behave consistently
+    if maker == seat:
+        planned_call_suit = trump
+        planned_alone = alone
+    else:
+        planned_call_suit = PASS_SUIT
+        planned_alone = False
+
+    results = []
+    for card in hand:
+        result = simulate_hand(
+            hand,
+            upcard,
+            seat,
+            planned_call_suit,
+            planned_alone,
+            card,
+            config,
+            results_filter,
+        )
+        # print(result)
+        # exit()
+        base = {"lead_choice": lead_label(card)}
+        rows = result if isinstance(result, list) else [result]
+        results.extend(base | row for row in rows)
+    return results
 
 
 # =========================
@@ -299,7 +362,11 @@ if __name__ == "__main__":
     )
 
     experiment_fn = EXPERIMENTS[args.experiment]
-    results = experiment_fn(hand, upcard, seat, config)
+
+    # TODO -  see if we can clean up since it got a little messy
+    results = simulate_first_lead(hand, upcard, 0, False, 1, 2, config)
+    # exit()
+    # results = experiment_fn(hand, upcard, seat, config)
 
     pd.set_option("display.float_format", "{:.3f}".format)
     df = pd.DataFrame(results).sort_values(args.metric, ascending=False)
