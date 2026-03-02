@@ -9,10 +9,27 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from cards import card_int, CARD_NAME, card_suit, PASS_SUIT, SUITS
+from cards import card_int, CARD_NAME, card_suit, PASS_SUIT, SUITS, suit_int
 from game import EuchreGame
 from rules import POINT_VALUES
 from strategy import *
+
+
+def read_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--experiment", choices=EXPERIMENTS, required=True)
+    parser.add_argument("--trials", type=int, default=50_000)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--split-maker", action="store_true")
+    parser.add_argument(
+        "--metric",
+        choices=("avg_points", "win_rate"),
+        default="avg_points",
+    )
+
+    args = parser.parse_args()
+    return args
 
 
 # =========================
@@ -260,22 +277,9 @@ def simulate_second_round_trump_choice(hand, upcard, seat, config: SimulationCon
     return run_choices(hand, upcard, seat, choices, config)
 
 
-def simulate_first_lead(
-    hand,
-    upcard,
-    trump,
-    alone,
-    maker,
-    call_round,
-    config: SimulationConfig,
-):
+def simulate_first_lead(hand, upcard, trump, alone, maker, config: SimulationConfig):
     seat = 1
-    results_filter = {
-        "trump": trump,
-        "call_round": call_round,
-        "maker": maker,
-        "is_loner": alone,
-    }
+    results_filter = {"trump": trump, "maker": maker, "is_loner": alone}
 
     # Ensure we do or do not want to call, so that we behave consistently
     if maker == seat:
@@ -313,37 +317,32 @@ EXPERIMENTS = {
     "all": simulate_all_choices,
     "first": simulate_first_round_trump_choice,
     "second": simulate_second_round_trump_choice,
+    "lead": simulate_first_lead,
 }
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--experiment", choices=EXPERIMENTS, required=True)
-    parser.add_argument("--trials", type=int, default=50_000)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--split-maker", action="store_true")
-    parser.add_argument(
-        "--metric",
-        choices=("avg_points", "win_rate"),
-        default="avg_points",
-    )
+    args = read_args()
 
-    args = parser.parse_args()
-
-    # Example setup
-    hand_str = ["Jc", "Ac", "9c", "Ah", "Qd"]
-    upcard_str = "9h"
-    seat = 1  # 0 is dealer
-
+    # Setup
     my_strat = SimpleStrategy()
     others = [SimpleStrategy() for _ in range(3)]
+    hand_str = ["Jc", "Ac", "9c", "Ah", "Qd"]
+    upcard_str = "9h"
 
-    hand = card_int(hand_str)
-    upcard = card_int(upcard_str)
+    # Parameters for all, first, and second experiments
+    seat = 1  # 0 is dealer
+
+    # Parameters for first lead experiment
+    trump_str = "Clubs"
+    alone = True
+    maker = 1
 
     strategies = others.copy()
     strategies.insert(seat, my_strat)
+    hand = card_int(hand_str)
+    upcard = card_int(upcard_str)
+    trump = suit_int(trump_str)
 
     print_experiment_header(
         experiment=args.experiment,
@@ -363,10 +362,10 @@ if __name__ == "__main__":
 
     experiment_fn = EXPERIMENTS[args.experiment]
 
-    # TODO -  see if we can clean up since it got a little messy
-    results = simulate_first_lead(hand, upcard, 0, False, 1, 2, config)
-    # exit()
-    # results = experiment_fn(hand, upcard, seat, config)
+    if args.experiment == "lead":
+        results = experiment_fn(hand, upcard, trump, alone, maker, config)
+    else:
+        results = experiment_fn(hand, upcard, seat, config)
 
     pd.set_option("display.float_format", "{:.3f}".format)
     df = pd.DataFrame(results).sort_values(args.metric, ascending=False)
